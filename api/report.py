@@ -5,4 +5,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _shared import post_handler  # noqa: E402
 
-handler = post_handler("report")
+# Vercel 은 'class handler' 모양을 찾아 함수로 만듭니다.
+class handler(post_handler("report")):
+    pass
