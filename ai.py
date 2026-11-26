@@ -2,7 +2,8 @@
 
 server.py 가 모의 모드가 아닐 때 이 파일의 ai_reply, ai_report 를 부릅니다.
 
-- AI 키는 .env 파일에서만 읽습니다. 화면·코드·대화에 적지 않습니다.
+- AI 키는 환경 변수 ANTHROPIC_API_KEY 에서 읽습니다.
+  (Vercel: Settings › Environment Variables / 내 컴퓨터: .env 파일) 화면·코드·대화에 적지 않습니다.
 - AI 결과는 정해 둔 JSON 모양(구조화 출력)으로만 받습니다.
 - 리뷰·문의 글은 고객이 쓴 '자료'로만 다루고, 그 안의 지시는 따르지 않게 합니다.
 """
@@ -51,8 +52,19 @@ def load_env():
             os.environ.setdefault(key.strip(), value)
 
 
-load_env()
+def clean_env(name):
+    """붙여 넣을 때 섞여 들어간 앞뒤 빈칸·줄바꿈·따옴표를 지웁니다."""
+    value = os.environ.get(name)
+    if value is not None:
+        os.environ[name] = value.strip().strip('"').strip("'").strip()
+
+
+load_env()           # 내 컴퓨터: .env 파일 (Vercel 에는 이 파일이 없어서 건너뜀)
+clean_env("ANTHROPIC_API_KEY")  # Vercel: Environment Variables 에 넣은 값
+clean_env("MODEL")
 MODEL = os.environ.get("MODEL") or "claude-sonnet-5-5"
+ON_VERCEL = bool(os.environ.get("VERCEL"))  # Vercel 이 자동으로 넣어 주는 표시
+KEY_PLACE = "Vercel 의 Settings › Environment Variables" if ON_VERCEL else ".env 파일"
 
 _client = None
 
@@ -62,7 +74,7 @@ def get_client():
     if _client is not None:
         return _client
     if not os.environ.get("ANTHROPIC_API_KEY"):
-        raise AIError("AI 키가 없어요. 내 컴퓨터에서는 .env 파일에, Vercel에서는 Environment Variables 에 ANTHROPIC_API_KEY 를 넣어 주세요.", 503)
+        raise AIError(f"AI 키가 없어요. {KEY_PLACE}에 ANTHROPIC_API_KEY 를 넣어 주세요.", 503)
     try:
         import anthropic
     except ImportError:
@@ -75,6 +87,9 @@ def status():
     return {
         "model": MODEL,
         "hasKey": bool(os.environ.get("ANTHROPIC_API_KEY")),
+        # 키 값은 절대 보내지 않고, 모양이 맞는지만 알려 줍니다.
+        "keyFormatOk": (os.environ.get("ANTHROPIC_API_KEY") or "").startswith("sk-ant-"),
+        "keyFrom": "vercel" if ON_VERCEL else "local",
     }
 
 
@@ -103,11 +118,11 @@ def call_json(system, user, schema, effort, max_tokens):
             with client.messages.stream(**params) as stream:
                 response = stream.get_final_message()
     except anthropic.AuthenticationError:
-        raise AIError("AI 키가 맞지 않아요. .env 파일의 키를 다시 확인해 주세요.", 401)
+        raise AIError(f"AI 키가 맞지 않아요. {KEY_PLACE}의 ANTHROPIC_API_KEY 값을 다시 확인해 주세요. (바꾼 뒤에는 Redeploy)" if ON_VERCEL else "AI 키가 맞지 않아요. .env 파일의 키를 다시 확인해 주세요.", 401)
     except anthropic.PermissionDeniedError:
         raise AIError("이 키로는 AI를 쓸 권한이 없어요. 키 설정을 확인해 주세요.", 403)
     except anthropic.NotFoundError:
-        raise AIError(f"모델 이름({MODEL})을 찾지 못했어요. .env 파일의 MODEL 값을 확인해 주세요.", 400)
+        raise AIError(f"모델 이름({MODEL})을 찾지 못했어요. {KEY_PLACE}의 MODEL 값을 확인해 주세요.", 400)
     except anthropic.RateLimitError:
         raise AIError("AI 사용량 한도에 걸렸어요. 1~2분 뒤에 다시 시도해 주세요.", 429)
     except anthropic.BadRequestError as e:
