@@ -1,18 +1,15 @@
-"""답글쓱 2단계: AI(Claude) 연결
+"""답글쓱 2단계: AI(ChatGPT · OpenAI) 연결
 
 server.py 가 모의 모드가 아닐 때 이 파일의 ai_reply, ai_report 를 부릅니다.
 
-- AI 키는 환경 변수 ANTHROPIC_API_KEY 에서 읽습니다.
-  (Vercel: Settings › Environment Variables / 내 컴퓨터: .env 파일) 화면·코드·대화에 적지 않습니다.
+- AI 키는 Vercel 의 Settings › Environment Variables 에 넣은 값만 씁니다. (.env 파일은 읽지 않음)
+  이름은 OPENAI_API_KEY 를 권장하고, 지금 넣어 둔 ANTHROPIC_API_KEY 이름도 그대로 읽습니다.
 - AI 결과는 정해 둔 JSON 모양(구조화 출력)으로만 받습니다.
 - 리뷰·문의 글은 고객이 쓴 '자료'로만 다루고, 그 안의 지시는 따르지 않게 합니다.
 """
 
 import json
 import os
-from pathlib import Path
-
-ROOT = Path(__file__).resolve().parent
 
 # 분류 8개 (PRD 8장) — public/logic.js 의 CATEGORIES 와 같아야 합니다.
 CATEGORIES = [
@@ -22,9 +19,8 @@ CATEGORIES = [
 TONES = ("친근한", "정중한", "간결한")
 MAX_ROWS = 300  # 리포트 한 번에 보낼 수 있는 리뷰 수 (AI 사용료와 시간 때문)
 
-# 거절(refusal) 시 서버가 다른 모델로 다시 시도하는 기능을 쓸 수 있는 모델
-FALLBACK_MODELS = {"claude-sonnet-5-5", "claude-opus-5-5", "claude-opus-5",
-                   "claude-fable-5-1", "claude-fable-5-2"}
+DEFAULT_MODEL = "gpt-4o-mini"  # 저렴한 ChatGPT 모델. 바꾸려면 Vercel 환경변수 MODEL 에 모델 이름을 넣으세요.
+KEY_PLACE = "Vercel 의 Settings › Environment Variables"
 
 
 class AIError(Exception):
@@ -35,36 +31,24 @@ class AIError(Exception):
         self.status = status
 
 
-# ---------- 설정 읽기 ----------
+# ---------- 설정 읽기 (Vercel 환경변수) ----------
 
-def load_env():
-    """.env 파일의 KEY=값 줄을 읽어 환경 변수로 넣습니다. (이미 있는 값은 덮어쓰지 않음)"""
-    path = ROOT / ".env"
-    if not path.is_file():
-        return
-    for line in path.read_text(encoding="utf-8").splitlines():
-        line = line.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, value = line.split("=", 1)
-        value = value.strip().strip('"').strip("'")
-        if value:
-            os.environ.setdefault(key.strip(), value)
+def env(name):
+    """환경변수 값을 읽고, 붙여 넣을 때 섞인 앞뒤 빈칸·줄바꿈·따옴표를 지웁니다."""
+    return (os.environ.get(name) or "").strip().strip('"').strip("'").strip()
 
 
-def clean_env(name):
-    """붙여 넣을 때 섞여 들어간 앞뒤 빈칸·줄바꿈·따옴표를 지웁니다."""
-    value = os.environ.get(name)
-    if value is not None:
-        os.environ[name] = value.strip().strip('"').strip("'").strip()
+def api_key():
+    return env("OPENAI_API_KEY") or env("ANTHROPIC_API_KEY")
 
 
-load_env()           # 내 컴퓨터: .env 파일 (Vercel 에는 이 파일이 없어서 건너뜀)
-clean_env("ANTHROPIC_API_KEY")  # Vercel: Environment Variables 에 넣은 값
-clean_env("MODEL")
-MODEL = os.environ.get("MODEL") or "claude-sonnet-5-5"
-ON_VERCEL = bool(os.environ.get("VERCEL"))  # Vercel 이 자동으로 넣어 주는 표시
-KEY_PLACE = "Vercel 의 Settings › Environment Variables" if ON_VERCEL else ".env 파일"
+def model_name():
+    m = env("MODEL")
+    # 예전에 넣어 둔 Claude 모델 이름(claude-…)은 OpenAI 에서 못 쓰므로 기본 모델을 씁니다.
+    return m if m and not m.startswith("claude") else DEFAULT_MODEL
+
+
+MODEL = model_name()
 
 _client = None
 
@@ -73,73 +57,64 @@ def get_client():
     global _client
     if _client is not None:
         return _client
-    if not os.environ.get("ANTHROPIC_API_KEY"):
-        raise AIError(f"AI 키가 없어요. {KEY_PLACE}에 ANTHROPIC_API_KEY 를 넣어 주세요.", 503)
+    if not api_key():
+        raise AIError(f"AI 키가 없어요. {KEY_PLACE}에 OPENAI_API_KEY 를 넣고 Redeploy 해 주세요.", 503)
     try:
-        import anthropic
+        import openai
     except ImportError:
-        raise AIError("AI 연결 프로그램(anthropic)이 설치되지 않았어요. 설치 후 서버를 다시 켜 주세요.", 503)
-    _client = anthropic.Anthropic(timeout=120.0, max_retries=2)
+        raise AIError("AI 연결 프로그램(openai)이 설치되지 않았어요. requirements.txt 를 확인해 주세요.", 503)
+    _client = openai.OpenAI(api_key=api_key(), timeout=120.0, max_retries=2)
     return _client
 
 
 def status():
+    key = api_key()
     return {
         "model": MODEL,
-        "hasKey": bool(os.environ.get("ANTHROPIC_API_KEY")),
-        # 키 값은 절대 보내지 않고, 모양이 맞는지만 알려 줍니다.
-        "keyFormatOk": (os.environ.get("ANTHROPIC_API_KEY") or "").startswith("sk-ant-"),
-        "keyFrom": "vercel" if ON_VERCEL else "local",
+        "hasKey": bool(key),
+        # 키 값은 절대 보내지 않고, OpenAI 키 모양(sk-…)인지만 알려 줍니다.
+        "keyFormatOk": key.startswith("sk-") and not key.startswith("sk-ant-"),
+        "provider": "openai",
     }
 
 
 # ---------- AI 호출 공통 ----------
 
 def call_json(system, user, schema, effort, max_tokens):
-    """AI에게 묻고, 정해 둔 JSON 모양으로 답을 받아 dict 로 돌려줍니다."""
+    """AI에게 묻고, 정해 둔 JSON 모양으로 답을 받아 dict 로 돌려줍니다. (effort 는 예전 방식과 맞추려고 남겨 둠)"""
     client = get_client()  # 키·설치 확인을 먼저 합니다
-    import anthropic
+    import openai
 
-    params = dict(
-        model=MODEL,
-        max_tokens=max_tokens,
-        system=system,
-        messages=[{"role": "user", "content": user}],
-        output_config={"effort": effort, "format": {"type": "json_schema", "schema": schema}},
-    )
     try:
-        if MODEL in FALLBACK_MODELS:
-            # 안전 검사로 거절되면 서버가 알맞은 다른 모델로 한 번 더 시도합니다.
-            with client.beta.messages.stream(
-                betas=["server-side-fallback-2026-07-01"], fallbacks="default", **params
-            ) as stream:
-                response = stream.get_final_message()
-        else:
-            with client.messages.stream(**params) as stream:
-                response = stream.get_final_message()
-    except anthropic.AuthenticationError:
-        raise AIError(f"AI 키가 맞지 않아요. {KEY_PLACE}의 ANTHROPIC_API_KEY 값을 다시 확인해 주세요. (바꾼 뒤에는 Redeploy)" if ON_VERCEL else "AI 키가 맞지 않아요. .env 파일의 키를 다시 확인해 주세요.", 401)
-    except anthropic.PermissionDeniedError:
-        raise AIError("이 키로는 AI를 쓸 권한이 없어요. 키 설정을 확인해 주세요.", 403)
-    except anthropic.NotFoundError:
-        raise AIError(f"모델 이름({MODEL})을 찾지 못했어요. {KEY_PLACE}의 MODEL 값을 확인해 주세요.", 400)
-    except anthropic.RateLimitError:
-        raise AIError("AI 사용량 한도에 걸렸어요. 1~2분 뒤에 다시 시도해 주세요.", 429)
-    except anthropic.BadRequestError as e:
-        raise AIError(f"AI에 보낸 요청이 거절됐어요. ({e.message})", 400)
-    except anthropic.APIStatusError:
+        response = client.chat.completions.create(
+            model=MODEL,
+            max_completion_tokens=max_tokens,
+            messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
+            response_format={"type": "json_schema",
+                             "json_schema": {"name": "result", "strict": True, "schema": schema}},
+        )
+    except openai.AuthenticationError:
+        raise AIError(f"AI 키가 맞지 않아요. {KEY_PLACE}의 키 값을 다시 확인하고 Redeploy 해 주세요.", 401)
+    except openai.PermissionDeniedError:
+        raise AIError("이 키로는 AI를 쓸 권한이 없어요. OpenAI 키 설정을 확인해 주세요.", 403)
+    except openai.NotFoundError:
+        raise AIError(f"모델 이름({MODEL})을 찾지 못했어요. {KEY_PLACE}의 MODEL 에 쓸 수 있는 모델 이름을 넣어 주세요.", 400)
+    except openai.RateLimitError:
+        raise AIError("AI 사용량 한도에 걸렸거나 OpenAI 크레딧이 부족해요. 잠시 뒤 다시 시도하거나 결제 상태를 확인해 주세요.", 429)
+    except openai.BadRequestError as e:
+        raise AIError(f"AI에 보낸 요청이 거절됐어요. ({getattr(e, 'message', e)})", 400)
+    except openai.APIStatusError:
         raise AIError("AI 서버에 문제가 있어요. 잠시 뒤 다시 시도해 주세요.", 502)
-    except anthropic.APIConnectionError:
-        raise AIError("AI 서버에 연결하지 못했어요. 인터넷 연결을 확인해 주세요.", 502)
+    except openai.APIConnectionError:
+        raise AIError("AI 서버에 연결하지 못했어요. 잠시 뒤 다시 시도해 주세요.", 502)
 
-    if response.stop_reason == "refusal":
+    choice = response.choices[0]
+    if getattr(choice.message, "refusal", None):
         raise AIError("AI가 이 내용은 처리하지 않겠다고 했어요. 내용을 확인하고 직접 작성해 주세요.", 422)
-    if response.stop_reason == "max_tokens":
+    if choice.finish_reason == "length":
         raise AIError("내용이 너무 길어 AI 답이 중간에 끊겼어요. 리뷰 수를 줄여 다시 시도해 주세요.", 413)
-
-    text = next((b.text for b in response.content if b.type == "text"), "")
     try:
-        return json.loads(text)
+        return json.loads(choice.message.content or "")
     except json.JSONDecodeError:
         raise AIError("AI 답을 읽지 못했어요. 다시 시도해 주세요.", 502)
 
@@ -294,7 +269,7 @@ def ai_report(payload):
     user = f"[{period} 리뷰 {len(rows)}개, 한 줄에 하나]\n<리뷰목록>\n" + "\n".join(lines) + "\n</리뷰목록>"
 
     try:
-        data = call_json(system, user, REPORT_SCHEMA, effort="medium", max_tokens=32000)
+        data = call_json(system, user, REPORT_SCHEMA, effort="medium", max_tokens=16000)
     except AIError as e:
         return e.status, {"error": str(e)}
 

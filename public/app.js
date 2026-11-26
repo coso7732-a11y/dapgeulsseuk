@@ -499,7 +499,7 @@
       } else {
         badge.textContent = st.hasKey ? `AI 모드 · ${st.model}` : "AI 모드 · 키 없음";
         badge.classList.toggle("off", !st.hasKey);
-        badge.title = st.hasKey ? "" : "답글쓱 폴더의 .env 파일에 AI 키를 넣고 서버를 다시 켜 주세요.";
+        badge.title = st.hasKey ? "" : "Vercel 의 Settings › Environment Variables 에 OPENAI_API_KEY 를 넣고 Redeploy 해 주세요.";
       }
     } catch {
       badge.textContent = "서버 연결 안 됨";

@@ -7,7 +7,7 @@
 
 MOCK=1 로 실행하면 AI 대신 data 폴더의 샘플 결과를 돌려줍니다.
 MOCK 없이 실행하면 ai.py 를 통해 AI(Claude)에게 묻습니다. (2단계)
-AI 키는 .env 파일에만 두고, 화면이나 이 파일에 적지 않습니다.
+AI 키는 Vercel 환경변수(OPENAI_API_KEY)에만 두고, 화면이나 이 파일에 적지 않습니다.
 
 실행: MOCK=1 python3 server.py  → 모의 모드
       python3 server.py         → AI 모드
@@ -199,7 +199,7 @@ if __name__ == "__main__":
         mode = "모의 모드(샘플 결과)"
     else:
         st = ai.status()
-        mode = f"AI 모드 · 모델 {st['model']} · 키 {'있음' if st['hasKey'] else '없음 (.env 확인 필요)'}"
+        mode = f"AI 모드 · 모델 {st['model']} · 키 {'있음' if st['hasKey'] else '없음 (OPENAI_API_KEY 환경변수 필요)'}"
     print(f"답글쓱 서버 시작: http://localhost:{PORT}  [{mode}]")
     try:
         server.serve_forever()
