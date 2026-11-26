@@ -62,7 +62,7 @@ def get_client():
     if _client is not None:
         return _client
     if not os.environ.get("ANTHROPIC_API_KEY"):
-        raise AIError("AI 키가 없어요. 답글쓱 폴더의 .env 파일에 키를 넣고 서버를 다시 켜 주세요.", 503)
+        raise AIError("AI 키가 없어요. 내 컴퓨터에서는 .env 파일에, Vercel에서는 Environment Variables 에 ANTHROPIC_API_KEY 를 넣어 주세요.", 503)
     try:
         import anthropic
     except ImportError:
