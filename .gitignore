@@ -1,0 +1,7 @@
+# AI 키가 들어 있는 파일은 절대 공유하지 않습니다.
+.env
+__pycache__/
+.DS_Store
+
+# 내 컴퓨터 전용 설정
+.claude/settings.local.json

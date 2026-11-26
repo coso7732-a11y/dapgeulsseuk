@@ -1,0 +1,25 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "답글쓱-모의모드",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "MOCK=1",
+        "python3",
+        "server.py"
+      ],
+      "port": 8123
+    },
+    {
+      "name": "답글쓱-AI모드",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "PORT=8124",
+        "python3",
+        "server.py"
+      ],
+      "port": 8124
+    }
+  ]
+}

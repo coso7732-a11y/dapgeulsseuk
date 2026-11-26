@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>답글쓱</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="logo">쓱</span><strong>답글쓱</strong></div>
+    <nav class="tabs" role="tablist">
+      <button class="tab active" data-view="review" role="tab">리뷰 답글</button>
+      <button class="tab" data-view="inquiry" role="tab">문의 답글</button>
+      <button class="tab" data-view="report" role="tab">리포트</button>
+      <button class="tab" data-view="settings" role="tab">내 쇼핑몰 설정</button>
+    </nav>
+    <span class="badge-mock">확인 중…</span>
+  </header>
+
+  <main>
+    <!-- ① 리뷰 답글 / 문의 답글: 같은 모양이라 app.js 가 아래 틀(template)로 채웁니다 -->
+    <section id="view-review" class="view active reply-view" data-kind="review"></section>
+    <section id="view-inquiry" class="view reply-view" data-kind="inquiry"></section>
+
+    <template id="reply-template">
+      <h1 data-r="title"></h1>
+      <p class="sub" data-r="sub"></p>
+
+      <div class="stats">
+        <div class="stat"><span>답글 대기</span><b data-r="stat-wait">0개</b></div>
+        <div class="stat"><span>답글 완료</span><b data-r="stat-done">0개</b></div>
+        <div class="stat"><span>직접 채워야 할 곳이 있는 답글</span><b data-r="stat-fill">0개</b></div>
+      </div>
+
+      <div class="cols">
+        <div class="col-left">
+          <div class="card">
+            <h2 data-r="file-title"></h2>
+            <p class="muted small" data-r="file-cols"></p>
+            <p class="privacy">이름·전화번호·주소는 지우고 넣어 주세요.</p>
+            <div class="row-btns">
+              <label class="btn primary file-btn">CSV 파일 올리기<input type="file" data-r="file" accept=".csv,text/csv" hidden></label>
+              <button class="btn ghost" data-r="load-sample"></button>
+            </div>
+            <ul class="errors" data-r="errors" aria-live="polite"></ul>
+          </div>
+
+          <div class="list-head">
+            <h3 class="list-title" data-r="list-title"></h3>
+            <button class="link-btn" data-r="clear" hidden>목록 비우기</button>
+          </div>
+          <div class="review-list" data-r="list"></div>
+        </div>
+
+        <div class="col-right card">
+          <p class="empty" data-r="panel-empty"></p>
+          <div data-r="panel" hidden>
+            <label data-r="original-label"></label>
+            <div class="quote" data-r="original"></div>
+            <label>말투 고르기</label>
+            <div class="chips" data-r="tones">
+              <button class="chip" data-tone="친근한">친근한</button>
+              <button class="chip" data-tone="정중한">정중한</button>
+              <button class="chip" data-tone="간결한">간결한</button>
+            </div>
+            <p class="msg warn" data-r="store-warn" hidden>내 쇼핑몰 설정이 비어 있어요. 빈 곳은 답글에 [대괄호]로 남아요.</p>
+            <button class="btn primary make-btn" data-r="make">답글 초안 만들기</button>
+            <div data-r="draft-area" hidden>
+              <div class="label-row"><label>답글 초안 (직접 고칠 수 있어요)</label><span data-r="count" class="muted">0자</span></div>
+              <textarea data-r="draft" rows="7"></textarea>
+              <p class="msg warn" data-r="banned" hidden></p>
+              <p class="msg warn" data-r="fill" hidden>[대괄호] 자리는 사장님이 직접 채워 주세요.</p>
+              <div class="notice" data-r="notice"></div>
+              <p class="muted small" data-r="note"></p>
+              <div class="row-btns">
+                <button class="btn primary" data-r="copy">복사하기</button>
+                <button class="btn ghost" data-r="next">다음 대기 건으로</button>
+              </div>
+              <p class="muted small" data-r="copy-help"></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <!-- ② 리포트 -->
+    <section id="view-report" class="view">
+      <div class="title-row">
+        <div>
+          <h1 id="report-title">주간 리뷰 리포트</h1>
+          <p class="sub">받은 리뷰를 불만 원인별로 정리하고 해 볼 일을 알려 드려요. <span id="report-range"></span></p>
+        </div>
+        <div class="period" role="tablist">
+          <button class="period-btn active" data-period="주간">주간 리포트</button>
+          <button class="period-btn" data-period="월간">월간 리포트</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>리뷰 CSV 넣기</h2>
+        <p class="muted small">열 5개가 이 순서로 있어야 해요: review_id, 작성일, 상품군, 별점, 리뷰내용</p>
+        <p class="privacy">이름·전화번호·주소는 지우고 넣어 주세요.</p>
+        <textarea id="csv-input" rows="6" placeholder="review_id,작성일,상품군,별점,리뷰내용&#10;R01,2026-11-16,주방용품,5,잘 받았어요"></textarea>
+        <div class="row-btns">
+          <button class="btn ghost" id="load-sample">가상 데이터 불러오기 (15행)</button>
+          <label class="btn ghost file-btn">CSV 파일 올리기<input type="file" id="csv-file" accept=".csv,text/csv" hidden></label>
+          <button class="btn primary" id="make-report">리포트 만들기</button>
+        </div>
+        <ul class="errors" id="csv-errors" aria-live="polite"></ul>
+      </div>
+
+      <div id="report-result" hidden>
+        <div class="stats">
+          <div class="stat"><span>받은 리뷰</span><b id="r-count">0건</b></div>
+          <div class="stat"><span>평균 별점</span><b id="r-avg">0점</b></div>
+          <div class="stat"><span>사람 확인 필요</span><b id="r-check">0건</b><small class="muted">복합·판단불가 리뷰</small></div>
+        </div>
+
+        <div class="summary-box">
+          <b>한눈에 보기</b>
+          <p id="r-summary"></p>
+        </div>
+
+        <div class="cols">
+          <div class="card">
+            <h2>불만 원인 순위</h2>
+            <div id="r-bars"></div>
+            <p class="muted small" id="r-others"></p>
+          </div>
+          <div class="card">
+            <h2>이번에 해 볼 일 3가지</h2>
+            <div id="r-todos"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>이런 말이 있었어요 (대표 리뷰)</h2>
+          <div class="quotes" id="r-quotes"></div>
+        </div>
+
+        <div class="card">
+          <h2>리뷰별 분류표</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>번호</th><th>상품군</th><th>별점</th><th>분류</th><th>한 줄 근거</th><th>사람 확인</th></tr></thead>
+              <tbody id="r-table"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="check-line" id="r-checkline"></div>
+        <div class="notice">원인은 AI가 리뷰 내용을 보고 추정한 거예요. 실제 원인은 사장님이 한 번 더 확인해 주세요.</div>
+        <p class="muted small" id="r-mock-note"></p>
+        <button class="btn primary" id="copy-report">리포트 전체 복사</button>
+      </div>
+    </section>
+
+    <!-- ③ 내 쇼핑몰 설정 -->
+    <section id="view-settings" class="view">
+      <h1>내 쇼핑몰 정보, 한 번만 적어 두세요</h1>
+      <p class="sub">여기에 적은 내용을 바탕으로 답글 초안이 만들어져요. 비워 둔 칸은 답글에 [대괄호]로 남겨 드려요.</p>
+
+      <div class="cols">
+        <form class="card" id="settings-form">
+          <label for="s-name">쇼핑몰 이름</label>
+          <input id="s-name" name="storeName" placeholder="예: 소영이네 리빙샵">
+          <label>기본 말투</label>
+          <div class="chips" id="s-tone">
+            <button type="button" class="chip" data-tone="친근한">친근한</button>
+            <button type="button" class="chip" data-tone="정중한">정중한</button>
+            <button type="button" class="chip" data-tone="간결한">간결한</button>
+          </div>
+          <label for="s-call">고객을 부르는 말</label>
+          <input id="s-call" name="customerCall" placeholder="예: 고객님">
+          <label for="s-exchange">교환·환불 안내</label>
+          <textarea id="s-exchange" name="exchangePolicy" rows="3" placeholder="내 쇼핑몰의 실제 정책을 적어 주세요. 예: 수령 후 7일 이내 교환 신청 가능"></textarea>
+          <label for="s-shipping">배송 안내</label>
+          <textarea id="s-shipping" name="shippingPolicy" rows="2" placeholder="예: 평일 오후 2시 전 주문은 당일 출고"></textarea>
+          <label for="s-contact">문의 채널</label>
+          <input id="s-contact" name="contactChannel" placeholder="예: 카카오톡 채널 또는 고객센터">
+          <label for="s-closing">답글 마지막에 넣을 인사말</label>
+          <input id="s-closing" name="closing" placeholder="예: 오늘도 좋은 하루 보내세요.">
+          <label for="s-banned">쓰고 싶지 않은 표현</label>
+          <input id="s-banned" name="bannedWords" placeholder="쉼표로 구분해 적어 주세요. 예: 무조건, 100%">
+          <p class="privacy">비밀번호, 계좌번호, API 키 같은 민감한 정보는 적지 마세요.</p>
+          <p class="msg" id="settings-msg" aria-live="polite"></p>
+          <div class="row-btns">
+            <button type="submit" class="btn primary">저장하기</button>
+            <button type="button" class="btn ghost" data-goto="review">리뷰 답글로 돌아가기</button>
+          </div>
+        </form>
+
+        <div class="card side">
+          <h2>적은 내용은 이렇게 쓰여요</h2>
+          <p class="muted small">불만 리뷰에 대한 답글 초안 미리보기예요. 비어 있는 칸은 [대괄호]로 남아요.</p>
+          <div class="quote" id="s-preview"></div>
+          <div class="notice">정책 내용은 AI가 정하지 않아요. 사장님이 적은 내용만 그대로 사용해요.</div>
+          <p class="muted small">저장한 내용은 이 브라우저에만 남아요.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="logic.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

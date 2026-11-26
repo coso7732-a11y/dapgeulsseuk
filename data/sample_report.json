@@ -1,0 +1,25 @@
+{
+  "_설명": "1단계(모의 모드)용 샘플 결과입니다. 가상 리뷰 15행(sample_reviews.csv)에만 맞습니다. 2단계에서는 이 자리를 AI 결과로 바꿉니다.",
+  "classifications": [
+    {"review_id": "R01", "categories": ["칭찬"], "reason": "포장과 상품이 사진과 같다며 만족함"},
+    {"review_id": "R02", "categories": ["배송", "안내 부족"], "reason": "6일 만에 도착했고 배송 위치 안내가 없었다고 함"},
+    {"review_id": "R03", "categories": ["포장"], "reason": "상자가 찌그러지고 유리컵에 금이 감"},
+    {"review_id": "R04", "categories": ["배송"], "reason": "배송이 늦어 원하는 날에 입지 못함"},
+    {"review_id": "R05", "categories": ["상품 품질"], "reason": "두 번 사용 후 손잡이 이음새가 벌어짐"},
+    {"review_id": "R06", "categories": ["사이즈·상품정보 불일치"], "reason": "평소 사이즈보다 작게 나와 어깨가 낌"},
+    {"review_id": "R07", "categories": ["칭찬"], "reason": "색감과 재질이 좋아 재구매 의사가 있음"},
+    {"review_id": "R08", "categories": ["응대·교환·환불"], "reason": "문의 후 사흘째 답변이 없음"},
+    {"review_id": "R09", "categories": ["상품 품질"], "reason": "뚜껑이 잘 닫히지 않는 불량으로 보임"},
+    {"review_id": "R10", "categories": ["응대·교환·환불", "안내 부족"], "reason": "설명서가 없고 교환 신청 방법을 모름"},
+    {"review_id": "R11", "categories": ["칭찬"], "reason": "튼튼하고 세척이 쉬워 만족함"},
+    {"review_id": "R12", "categories": ["배송"], "reason": "별점은 4점이지만 예정일보다 3일 늦게 도착함"},
+    {"review_id": "R13", "categories": ["사이즈·상품정보 불일치"], "reason": "상세 사진의 색과 실제 색이 다름"},
+    {"review_id": "R14", "categories": ["판단불가"], "reason": "'그냥 그래요'만 있어 원인을 알 수 없음"},
+    {"review_id": "R15", "categories": ["응대·교환·환불"], "reason": "환불 처리가 계속 미뤄짐"}
+  ],
+  "todos": [
+    {"category": "배송", "title": "늦게 도착한 주문의 출고일과 택배 구간을 확인하기", "detail": "출고가 늦었는지, 택배 배송이 늦었는지 먼저 나눠서 확인해 보세요."},
+    {"category": "응대·교환·환불", "title": "밀린 문의와 환불 요청부터 답하기", "detail": "답변이 늦거나 처리가 미뤄졌다는 리뷰가 있어요. 교환·환불 절차를 상세페이지에도 적어 두면 좋아요."},
+    {"category": "안내 부족", "title": "배송 상황과 조립 방법 안내 넣기", "detail": "출고 알림 문자와 설명서(또는 사용법 이미지)를 함께 보내 보세요."}
+  ]
+}
