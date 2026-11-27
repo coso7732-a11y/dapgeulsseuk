@@ -43,7 +43,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
   max-width: 1200px; margin: 0 auto; padding: 16px 24px;
   border-bottom: 1px solid var(--line-soft);
 }
-.brand { display: flex; align-items: center; gap: 8px; font-size: 20px; color: var(--text-strong); }
+.brand { display: flex; align-items: center; gap: 8px; font-size: 20px; color: var(--text-strong); text-decoration: none; }
 .logo {
   display: inline-grid; place-items: center; width: 36px; height: 36px;
   background: var(--primary); color: #fff; border-radius: var(--pill); font-size: 15px; font-weight: 700;
