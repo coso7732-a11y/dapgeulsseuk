@@ -19,7 +19,7 @@ CATEGORIES = [
 TONES = ("친근한", "정중한", "간결한")
 MAX_ROWS = 300  # 리포트 한 번에 보낼 수 있는 리뷰 수 (AI 사용료와 시간 때문)
 
-DEFAULT_MODEL = "gpt-4o-mini"  # 저렴한 ChatGPT 모델. 바꾸려면 Vercel 환경변수 MODEL 에 모델 이름을 넣으세요.
+DEFAULT_MODEL = "gpt-6-luna"  # 대량 작업에 효율적인 ChatGPT 모델. 바꾸려면 Vercel 환경변수 MODEL 에 모델 이름을 넣으세요.
 KEY_PLACE = "Vercel 의 Settings › Environment Variables"
 
 
